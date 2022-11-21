@@ -26,7 +26,7 @@ class LSTMClassifier(nn.Module):
         return self.classifer(last_hidden_states.view(-1,self.hidden_dim))
     
     # 訓練
-    def fit(self, X, y, epochs, optimizer, criterion, batch_size=32):
+    def fit(self, X, y, epochs, optimizer, criterion, batch_size=16):
         self.train()
         
         #labelをindexに変換する辞書作成 eg.{"waka":0, "tanka":1}
@@ -91,7 +91,7 @@ class NaiveBayes():
             self.label_names[c] = i
         
         y_np = np.array([self.label_names[c] for c in y], dtype=np.int32)
-        X_np = np.array(X, dtype=np.float64)
+        X_np = np.array(X, dtype=np.bool8) #トークンが出現するか否か(0 or 1)の形式に変換
         X_dim = X_np.shape[1]
 
         #P(c): カテゴリcの文章数 / コーパス全文章数
@@ -99,11 +99,9 @@ class NaiveBayes():
         self.label_prob = y_count / np.sum(y_count) #P(cj) ndarray [num_label]
         
         #P(w|c): カテゴリcかつ単語wを含む文章数 / カテゴリcの文章数
-        X_hard = np.zeros_like(X_np) 
-        X_hard[np.where(X_np>0)] = 1 #トークンが出現するか否か(0 or 1)の形式に変換
         self.p = np.empty((num_label, X_dim)) #P(w|c): ndarray [num_label, X_dim]
         for i in range(num_label):
-            self.p[i] = np.sum(X_hard[np.where(y_np==i)], axis=0, dtype=np.float64) / y_count[i]
+            self.p[i] = np.sum(X_np[np.where(y_np==i)], axis=0, dtype=np.float64) / y_count[i]
 
         self.p[np.where(self.p==0)] = smooth
         self.is_trained = True
@@ -116,7 +114,7 @@ class NaiveBayes():
         if not self.is_trained:
             raise Exception("not trained")
 
-        X_np = np.array(X, dtype=np.float64)
+        X_np = np.array(X, dtype=np.bool8)
         #check feature dim
         if X_np.shape[1] != self.p.shape[1]:
             raise Exception("X_dim != X_trained_dim")
